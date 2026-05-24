@@ -1,0 +1,36 @@
+{
+  "name": "test-gap-finder",
+  "version": "0.1.0",
+  "description": "Inspect a git diff and suggest focused tests that should be added or run.",
+  "type": "module",
+  "bin": {
+    "test-gap-finder": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "node test/run-tests.js"
+  },
+  "keywords": [
+    "cli",
+    "developer-tools",
+    "open-source",
+    "ai-workflow"
+  ],
+  "author": "niuxinhuai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niuxinhuai/test-gap-finder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/niuxinhuai/test-gap-finder/issues"
+  },
+  "homepage": "https://github.com/niuxinhuai/test-gap-finder#readme",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
