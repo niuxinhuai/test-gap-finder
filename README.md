@@ -27,6 +27,7 @@ test-gap-finder --help
 - Scans working tree or staged changes.
 - Maps changed source files to likely test file candidates.
 - Suggests focused test types by source path: API, UI, auth, schema, or generic behavior.
+- Supports `.test-gap-finder.json`, ignored paths, custom source/test patterns, and monorepo package hints.
 - Can fail CI or hooks when obvious gaps exist.
 
 ### Usage
@@ -35,6 +36,7 @@ test-gap-finder --help
 test-gap-finder
 test-gap-finder --base main
 test-gap-finder --staged --fail-on-gap
+test-gap-finder --config examples/test-gap-finder.json
 test-gap-finder --json
 ```
 
@@ -70,6 +72,7 @@ test-gap-finder --help
 - 支持扫描工作区或 staged 变更。
 - 把变更源码映射到可能的测试文件候选。
 - 按路径类型建议 API、UI、权限、schema 或通用行为测试。
+- 支持 `.test-gap-finder.json`、忽略路径、自定义源码/测试匹配规则和 monorepo package 提示。
 - 发现明显缺口时可用于 CI 或 hook 失败。
 
 ### 用法

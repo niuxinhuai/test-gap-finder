@@ -1,0 +1,8 @@
+{
+  "sourcePattern": "\\.(js|ts|tsx|py)$",
+  "testPattern": "(^|/)(__tests__|tests?)/|\\.(test|spec)\\.(js|ts|tsx|py)$",
+  "ignore": [
+    "docs/**",
+    "**/*.md"
+  ]
+}
