@@ -22,24 +22,31 @@ npm link
 test-gap-finder --help
 ```
 
-### Usage
+### Features
 
-Run before opening a PR.
+- Scans working tree or staged changes.
+- Maps changed source files to likely test file candidates.
+- Suggests focused test types by source path: API, UI, auth, schema, or generic behavior.
+- Can fail CI or hooks when obvious gaps exist.
+
+### Usage
 
 ```bash
 test-gap-finder
 test-gap-finder --base main
+test-gap-finder --staged --fail-on-gap
 test-gap-finder --json
 ```
 
-### Status
+### Automation
 
-This is an MVP designed to be useful immediately and easy to extend. It has no runtime dependencies and targets Node.js 18+.
+Use as an advisory check first; turn on --fail-on-gap only after your repo naming conventions are predictable.
 
 ### Test
 
 ```bash
 npm test
+npm --cache /tmp/npm-cache pack --dry-run .
 ```
 
 ## 中文
@@ -58,22 +65,29 @@ npm link
 test-gap-finder --help
 ```
 
-### 用法
+### 功能
 
-发 PR 前运行。
+- 支持扫描工作区或 staged 变更。
+- 把变更源码映射到可能的测试文件候选。
+- 按路径类型建议 API、UI、权限、schema 或通用行为测试。
+- 发现明显缺口时可用于 CI 或 hook 失败。
+
+### 用法
 
 ```bash
 test-gap-finder
 test-gap-finder --base main
+test-gap-finder --staged --fail-on-gap
 test-gap-finder --json
 ```
 
-### 当前状态
+### 自动化
 
-这是一个可以直接使用的 MVP，重点是小、清晰、容易二次开发。运行时无第三方依赖，要求 Node.js 18+。
+Use as an advisory check first; turn on --fail-on-gap only after your repo naming conventions are predictable.
 
 ### 测试
 
 ```bash
 npm test
+npm --cache /tmp/npm-cache pack --dry-run .
 ```

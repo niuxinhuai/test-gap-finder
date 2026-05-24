@@ -1,37 +1,62 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const VERSION = '0.1.0';
 const args = process.argv.slice(2);
-if (args.includes('--help') || args.includes('-h')) {
-  console.log(`test-gap-finder
+function has(flag) { return args.includes(flag); }
+function value(flag, fallback) { const i = args.indexOf(flag); return i >= 0 ? args[i + 1] : fallback; }
+if (has('--help') || has('-h')) {
+  console.log(`test-gap-finder v${VERSION}
 
 Usage:
-  test-gap-finder [--base HEAD] [--json]`);
+  test-gap-finder [--base HEAD] [--staged] [--json] [--fail-on-gap]`);
   process.exit(0);
 }
-const json = args.includes('--json');
-const baseIndex = args.indexOf('--base');
-const base = baseIndex >= 0 ? args[baseIndex + 1] : 'HEAD';
+if (has('--version')) { console.log(VERSION); process.exit(0); }
+const json = has('--json');
+const staged = has('--staged');
+const base = value('--base', 'HEAD');
 function git(params) { return execFileSync('git', params, { encoding: 'utf8' }).trim(); }
 let lines = '';
-try { lines = git(['diff', base, '--name-status']); } catch { console.error('test-gap-finder must be run inside a git repository.'); process.exit(1); }
-const files = lines.split('\n').filter(Boolean).map((line) => {
-  const [status, ...rest] = line.split(/\s+/);
-  return { status, path: rest.join(' ') };
-});
-const isTest = (p) => /(^|\/)(__tests__|tests?|spec)\/|\.(test|spec)\.(js|ts|tsx|jsx|py)$/.test(p);
+try { lines = git(staged ? ['diff', '--cached', '--name-status'] : ['diff', base, '--name-status']); } catch { console.error('test-gap-finder must be run inside a git repository.'); process.exit(1); }
+const files = lines.split('\n').filter(Boolean).map((line) => { const [status, ...rest] = line.split(/\s+/); return { status, path: rest.join(' ') }; });
+const isTest = (p) => /(^|\/)(__tests__|tests?|spec)\/|\.(test|spec)\.(js|ts|tsx|jsx|py|go|rs|java|kt)$/.test(p);
 const source = files.filter((f) => /\.(js|ts|tsx|jsx|py|go|rs|java|kt|swift|ets)$/.test(f.path) && !isTest(f.path));
 const tests = files.filter((f) => isTest(f.path));
+function possibleTests(file) {
+  const parsed = path.parse(file.path);
+  const baseName = parsed.name.replace(/\.(service|controller|component|page|view)$/, '');
+  return [
+    path.join(parsed.dir, `${parsed.name}.test${parsed.ext}`),
+    path.join(parsed.dir, `${parsed.name}.spec${parsed.ext}`),
+    path.join('test', `${baseName}.test${parsed.ext}`),
+    path.join('tests', `${baseName}.test${parsed.ext}`)
+  ];
+}
 function suggestion(file) {
-  if (/api|route|controller|service/i.test(file.path)) return 'Add request/response, error-path, and permission tests.';
-  if (/ui|component|page|view/i.test(file.path)) return 'Add state, empty/error/loading, and interaction coverage.';
-  if (/auth|permission|role|security/i.test(file.path)) return 'Add deny-by-default and role boundary tests.';
-  if (/schema|migration|model/i.test(file.path)) return 'Add migration/serialization compatibility checks.';
+  if (/api|route|controller|service/i.test(file.path)) return 'Add request/response, error-path, permission, and backward-compatibility tests.';
+  if (/ui|component|page|view/i.test(file.path)) return 'Add loading, empty, error, long-text, and interaction coverage.';
+  if (/auth|permission|role|security/i.test(file.path)) return 'Add deny-by-default, role boundary, and privilege escalation tests.';
+  if (/schema|migration|model/i.test(file.path)) return 'Add migration, serialization, and rollback compatibility checks.';
   return 'Add a focused regression test around the changed behavior.';
 }
-const gaps = source.map((file) => ({ file: file.path, suggestion: suggestion(file) }));
-const result = { sourceChanged: source.map((f) => f.path), testsChanged: tests.map((f) => f.path), gaps: tests.length ? [] : gaps };
-if (json) { console.log(JSON.stringify(result, null, 2)); process.exit(0); }
-console.log(`# Test Gap Finder
+const gaps = source.map((file) => {
+  const candidates = possibleTests(file);
+  const existingCandidates = candidates.filter((candidate) => fs.existsSync(candidate));
+  const touchedCandidates = tests.map((t) => t.path).filter((testPath) => candidates.includes(testPath));
+  return { file: file.path, existingCandidates, touchedCandidates, suggestion: suggestion(file), hasCoverageSignal: existingCandidates.length > 0 || touchedCandidates.length > 0 };
+}).filter((gap) => !gap.hasCoverageSignal);
+let scripts = {};
+try { scripts = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts || {}; } catch {}
+const commands = [];
+if (scripts.test) commands.push('npm test');
+if (scripts['test:unit']) commands.push('npm run test:unit');
+if (scripts['test:e2e']) commands.push('npm run test:e2e');
+const result = { base, staged, sourceChanged: source.map((f) => f.path), testsChanged: tests.map((f) => f.path), gaps, suggestedCommands: commands };
+if (json) console.log(JSON.stringify(result, null, 2));
+else console.log(`# Test Gap Finder
 
 ## Source changed
 ${source.length ? source.map((f) => `- ${f.path}`).join('\n') : '- No source files detected.'}
@@ -39,6 +64,10 @@ ${source.length ? source.map((f) => `- ${f.path}`).join('\n') : '- No source fil
 ## Tests changed
 ${tests.length ? tests.map((f) => `- ${f.path}`).join('\n') : '- No test files changed.'}
 
-## Suggested tests
-${result.gaps.length ? result.gaps.map((g) => `- ${g.file}: ${g.suggestion}`).join('\n') : '- Test files changed in this diff; review whether they cover the modified behavior.'}
+## Gaps
+${gaps.length ? gaps.map((g) => `- ${g.file}: ${g.suggestion}`).join('\n') : '- No obvious test gap found from file names.'}
+
+## Suggested commands
+${commands.length ? commands.map((cmd) => `- ${cmd}`).join('\n') : '- No package test scripts detected.'}
 `);
+if (has('--fail-on-gap') && gaps.length) process.exit(2);
